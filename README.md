@@ -7,6 +7,9 @@ Lockup-Stake-MetaPool works as a normal stake pool contract, accepting Lockup-ac
 
 The contract is non-custodial, and the owner can unstake the funds with the standard four epochs delay.
 
+## Mainnet contract address
+* `lockup.meta-pool-dao.near`
+
 ## Instructions
 ### To Build the wasm
 
@@ -17,3 +20,7 @@ The contract is non-custodial, and the owner can unstake the funds with the stan
 1. Compile Meta Pool liquid staking contract, using the branch "`for-test`" 
 2. get the generated `metapool.wasm` into `/res` folder
 3. run `cargo test`
+
+### Testnet contract address
+
+* `lockup.meta-v2.pool.testnet`
