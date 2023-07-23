@@ -24,6 +24,8 @@ pub const ONE_E24: u128 = 1_000_000_000_000_000_000_000_000;
 pub const NEAR: u128 = ONE_E24;
 pub const ONE_NEAR: u128 = NEAR;
 
+pub mod test_only;
+
 construct_uint! {
     /// 256-bit unsigned integer.
     #[derive(BorshSerialize, BorshDeserialize)]
