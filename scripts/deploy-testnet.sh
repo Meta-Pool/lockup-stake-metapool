@@ -14,29 +14,19 @@ WASM=res/lockup_stake_metapool.wasm
 OWNER=test-narwallets.$NETWORK
 
 # FIRST DEPLOY
-## delete acc
+# # delete acc
 # echo "Delete $CONTRACT_ACC? are you sure? Ctrl-C to cancel"
 # read input
-# near delete $CONTRACT_ACC $MASTER_ACC
-# near create-account $CONTRACT_ACC --masterAccount $MASTER_ACC
-#  near deploy $CONTRACT_ACC $WASM \
+# near delete $CONTRACT_ACC $MASTER_ACC --beneficiaryId $MASTER_ACC
+# near create-account $CONTRACT_ACC --masterAccount $MASTER_ACC --initialBalance 10
+# near deploy $CONTRACT_ACC $WASM \
 #      new "{\"owner_id\":\"$OWNER\", \"meta_pool_contract_id\":\"$META_POOL_CONTRACT\"}" \
 #      --accountId $MASTER_ACC
-#  exit    
-## set params@meta set_params
-#meta set_params
-## deafult 4 pools
-##meta default_pools_testnet
+#exit    
 
-## test
-#near call $CONTRACT_ACC set_busy "{\"value\":false}" --accountId $CONTRACT_ACC --depositYocto 1
-
-# set contract busy to make sure we're not upgrading in the middle of a cross-contract call
-# set -ex
-# near call $CONTRACT_ACC set_busy '{"value":true}' --accountId $OPERATOR_ACC --depositYocto 1
-# set -e
 
 # RE-DEPLOY, code only
 near deploy $CONTRACT_ACC $WASM  --accountId $MASTER_ACC --networkId $NETWORK
 
-#near call $CONTRACT_ACC set_busy '{"value":false}' --accountId $OPERATOR_ACC --depositYocto 1
+# update price
+near call $CONTRACT_ACC ping --accountId $OWNER
