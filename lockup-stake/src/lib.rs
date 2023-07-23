@@ -1,15 +1,15 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{UnorderedMap};
+use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, Balance, EpochHeight, Gas,
+    env, ext_contract, near_bindgen, AccountId, Balance, Gas,
     Promise
 };
 use uint::construct_uint;
 
 use crate::account::{Account, NumStakeShares};
-pub use crate::views::{HumanReadableAccount};
+pub use crate::views::HumanReadableAccount;
 
 mod account;
 mod internal;
@@ -24,12 +24,6 @@ pub const ONE_E24: u128 = 1_000_000_000_000_000_000_000_000;
 pub const NEAR: u128 = ONE_E24;
 pub const ONE_NEAR: u128 = NEAR;
 
-/// The number of epochs required for the locked balance to become unlocked.
-/// NOTE: The actual number of epochs when the funds are unlocked is 3. But there is a corner case
-/// when the unstaking promise can arrive at the next epoch, while the inner state is already
-/// updated in the previous epoch. It will not unlock the funds for 4 epochs.
-const NUM_EPOCHS_TO_UNLOCK: EpochHeight = 4;
-
 construct_uint! {
     /// 256-bit unsigned integer.
     #[derive(BorshSerialize, BorshDeserialize)]
@@ -43,8 +37,8 @@ pub struct StakingContract {
     /// The total amount of shares. It should be equal to the total amount of shares across all
     /// accounts.
     pub total_stake_shares: NumStakeShares,
-    /// The total staked balance.
-    pub total_staked_balance: Balance,
+    /// reserved for future use
+    pub reserved: Balance,
     /// Persistent map from an account ID to the corresponding account.
     pub accounts: UnorderedMap<AccountId, Account>,
     /// Whether the staking is paused.
@@ -89,7 +83,7 @@ impl StakingContract {
         );
         Self {
             owner_id,
-            total_staked_balance: 0,
+            reserved: 0,
             total_stake_shares: 0,
             accounts: UnorderedMap::new(b"a"),
             paused: false,

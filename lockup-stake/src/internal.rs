@@ -51,16 +51,11 @@ impl StakingContract {
         account.unstaked -= amount;
         self.internal_save_account(&account_id, &account);
 
-        self.total_staked_balance += amount;
-
         log!(
             "@{} staking {}. Total {} unstaked balance",
             account_id,
             amount,
             account.unstaked,
-        );
-        log!(
-            "Contract total staked balance is {}", self.total_staked_balance
         );
     }
     pub(crate) fn rollback_internal_stake(&mut self, account_id: AccountId, amount: Balance) {
@@ -69,16 +64,11 @@ impl StakingContract {
         account.unstaked += amount;
         self.internal_save_account(&account_id, &account);
 
-        self.total_staked_balance -= amount;
-
         log!(
             "ROLLBACK @{} staking {}. Total {} unstaked balance",
             account_id,
             amount,
             account.unstaked,
-        );
-        log!(
-            "Contract total staked balance is {}", self.total_staked_balance
         );
     }
 
