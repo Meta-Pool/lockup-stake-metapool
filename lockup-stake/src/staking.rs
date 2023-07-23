@@ -48,54 +48,52 @@ pub trait SelfContract {
     fn after_unstake_shares(&mut self, account_id: AccountId, num_shares: U128);
 }
 
+const NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE: &str = "not supported, please use deposit_and_stake";
+
 #[near_bindgen]
 impl StakingContract {
     // =====================
     // == DEPOSIT & STAKE ==
     // =====================
 
-    // Note: there are two deposit functions in the reference contract near-core/staking-pool:
-    // `deposit` and `deposit_and_stake`. To increase safety and simplicity, we only support here `deposit_and_stake` method.
-    // This is the same decision made in the meta-pool contract. This simplification also implies removing `fn stake` and `fn stake_all`.
-    // All actions can be replaced by calls to `deposit_and_stake`
+    // Note: In the reference contract near-core/staking-pool, depositing and staking 
+    // can be performed separately or in a single call:
+    // There are functions called: `deposit` then `stake` and `stake_all`, and the composed `deposit_and_stake`.
+    // To increase safety and simplicity, we only support the simpler `deposit_and_stake` method.
+    // By removing the concept of "locally deposited balance" the contract becomes simpler and thus more secure. 
+    // Note 1: All unstake and withdraw functions are supported.
+    // Note 2: The standard wallet uses deposit_and_stake when dealing with lockup accounts
     #[payable]
     pub fn deposit(&mut self) {
-        panic!("not supported, please use deposit_and_stake");
+        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Stakes all available unstaked balance from the inner account of the predecessor.
     pub fn stake_all(&mut self) -> Promise {
-        panic!("not supported, please use deposit_and_stake");
+        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Stakes the given amount from the inner account of the predecessor.
     /// The inner account should have enough unstaked balance.
     #[allow(unused_variables)]
     pub fn stake(&mut self, amount: U128) -> Promise {
-        panic!("not supported, please use deposit_and_stake");
+        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Deposits the attached amount into the inner account of the predecessor and stakes it.
     /// Note: The foundation-s near-core/lockup-contract USES 50GAS for this call
     #[payable]
     pub fn deposit_and_stake(&mut self) -> Promise {
-        self.perform_stake(env::predecessor_account_id(), env::attached_deposit())
-    }
+     
+        let account_id = env::predecessor_account_id();
+        let amount = env::attached_deposit();
 
-    /// Stakes the given amount from the balance at account.unstaked
-    /// The account should have enough unstaked balance.
-    /// calls Meta Pool to stake
-    fn perform_stake(
-        &mut self,
-        account_id: AccountId,
-        amount: u128,
-    ) -> Promise {
         // we're managing lockup.accounts, keep a sane minimum
         assert!(amount >= 10 * ONE_NEAR, "minimum deposit amount is 10 NEAR");
 
         // avoiding re-entry
         self.set_account_busy_flag_or_panic(&account_id);
-        // call meta pool
+        // call meta pool to stake
         ext_metapool::stake_for_lockup(
             account_id.to_string(),
             //---
