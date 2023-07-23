@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command": ".",
+			"args": ["build.sh"],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "build.sh"
+		}
+	]
+}

@@ -1,15 +1,17 @@
 set -e
+bash build.sh
+
 NETWORK=testnet
-OWNER=lucio.$NETWORK
 POOL_DOT_NETWORK=pool.$NETWORK
 META_POOL_CONTRACT=meta-v2.$POOL_DOT_NETWORK
 MASTER_ACC=$META_POOL_CONTRACT
 CONTRACT_ACC=lockup.$MASTER_ACC
 
-bash build.sh
+export NEAR_ENV=$NETWORK
+echo $NETWORK, $CONTRACT_ACC
 
 WASM=res/lockup_stake_metapool.wasm
-export NEAR_ENV=$NETWORK
+OWNER=test-narwallets.$NETWORK
 
 # FIRST DEPLOY
 ## delete acc
@@ -30,12 +32,11 @@ export NEAR_ENV=$NETWORK
 #near call $CONTRACT_ACC set_busy "{\"value\":false}" --accountId $CONTRACT_ACC --depositYocto 1
 
 # set contract busy to make sure we're not upgrading in the middle of a cross-contract call
-set -ex
-#near call $CONTRACT_ACC set_busy '{"value":true}' --accountId $OPERATOR_ACC --depositYocto 1
-set -e
+# set -ex
+# near call $CONTRACT_ACC set_busy '{"value":true}' --accountId $OPERATOR_ACC --depositYocto 1
+# set -e
 
 # RE-DEPLOY, code only
-echo $NETWORK, $CONTRACT_ACC
 near deploy $CONTRACT_ACC $WASM  --accountId $MASTER_ACC --networkId $NETWORK
 
 #near call $CONTRACT_ACC set_busy '{"value":false}' --accountId $OPERATOR_ACC --depositYocto 1
