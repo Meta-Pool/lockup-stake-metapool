@@ -1,4 +1,4 @@
-use near_sdk::{env};
+use near_sdk::env;
 
 use crate::ext_contract;
 use crate::*;

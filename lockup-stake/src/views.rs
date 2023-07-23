@@ -1,8 +1,8 @@
-use near_sdk::json_types::{U128};
+use near_sdk::json_types::U128;
 use near_sdk::{env, AccountId};
 
-use crate::*;
 use crate::utils::mul_div;
+use crate::*;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -66,14 +66,14 @@ impl StakingContract {
 
     /// Returns the total staking balance.
     pub fn get_total_staked_balance(&self) -> U128 {
-        self.total_staked_balance.into()
+        // return shares * price
+        mul_div(self.total_stake_shares, self.share_near_price, ONE_E24).into()
     }
-    
+
     /// Returns total_stake_shares
     pub fn get_total_stake_shares(&self) -> U128 {
         self.total_stake_shares.into()
     }
-    
 
     /// Returns the current reward fee as a fraction.
     pub fn get_reward_fee_fraction(&self) -> RewardFeeFraction {
