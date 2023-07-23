@@ -93,7 +93,7 @@ impl StakingContract {
         let account = self.internal_get_account(&account_id);
         HumanReadableAccount {
             account_id,
-            unstaked_balance: (account.unstaked + account.unstaked_in_metapool).into(),
+            unstaked_balance: account.unstaked_in_metapool.into(),
             staked_balance: mul_div(account.stake_shares, self.share_near_price, ONE_E24).into(),
             can_withdraw: account.unstaked_available_epoch_height <= env::epoch_height(),
         }

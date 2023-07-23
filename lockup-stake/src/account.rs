@@ -7,9 +7,9 @@ pub type NumStakeShares = Balance;
 /// Inner account data of a delegate.
 #[derive(BorshDeserialize, BorshSerialize, Debug, PartialEq, Default)]
 pub struct Account {
-    /// The unstaked balance. It represents the amount the account has on this contract that
-    /// can either be re-staked or withdrawn.
-    pub unstaked: Balance,
+    /// The account is involved in a cross-contract call
+    /// avoids re-entry attacks
+    pub busy: bool,
     /// The unstaked balance in Meta Pool corresponding to this account.
     /// when a delay unstake is initiated, the same order is sent to Meta Pool,
     /// and we register here the amount it should be available there after 4 epochs
@@ -26,6 +26,6 @@ pub struct Account {
 
 impl Account {
     pub fn is_empty(&self) -> bool {
-        self.unstaked == 0 && self.unstaked_in_metapool == 0 && self.stake_shares == 0
+        !self.busy && self.unstaked_in_metapool == 0 && self.stake_shares == 0
     }
 }

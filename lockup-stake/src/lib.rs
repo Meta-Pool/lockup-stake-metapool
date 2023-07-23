@@ -34,11 +34,8 @@ construct_uint! {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct StakingContract {
     pub owner_id: AccountId,
-    /// The total amount of shares. It should be equal to the total amount of shares across all
-    /// accounts.
+    /// The total amount of shares, should be equal to sum(accounts.shares).
     pub total_stake_shares: NumStakeShares,
-    /// reserved for future use
-    pub reserved: Balance,
     /// Persistent map from an account ID to the corresponding account.
     pub accounts: UnorderedMap<AccountId, Account>,
     /// Whether the staking is paused.
@@ -47,13 +44,12 @@ pub struct StakingContract {
     /// Pausing is useful for node maintenance. Only the owner can pause and resume staking.
     /// The contract is not paused by default.
     pub paused: bool,
-    /// Avoid re-entrance risks
-    pub contract_busy: bool,
 
+    // distributed, decentralized staking contract
     pub meta_pool_contract_id: AccountId,
-    // how many nears a share (stNEAR) is worth (should be get from Meta Pool on ping)
+    // how many nears a share (stNEAR) is worth (get from Meta Pool on ping)
     pub share_near_price: Balance,
-    // meta pool fee should be get from Meta Pool on ping
+    // meta pool fee (get from Meta Pool on ping)
     pub meta_pool_fee_bp: u16,
 }
 
@@ -65,12 +61,7 @@ impl Default for StakingContract {
 
 #[near_bindgen]
 impl StakingContract {
-    /// Initializes the contract with the given owner_id, initial staking public key (with ED25519
-    /// curve) and initial reward fee fraction that owner charges for the validation work.
-    ///
-    /// The entire current balance of this contract will be used to stake. This allows contract to
-    /// always maintain staking shares that can't be unstaked or withdrawn.
-    /// It prevents inflating the price of the share too much.
+    /// Initializes the contract 
     #[init]
     pub fn new(
         owner_id: AccountId,
@@ -83,24 +74,21 @@ impl StakingContract {
         );
         Self {
             owner_id,
-            reserved: 0,
             total_stake_shares: 0,
             accounts: UnorderedMap::new(b"a"),
             paused: false,
-            contract_busy: false,
             meta_pool_contract_id,
             share_near_price: ONE_NEAR,
             meta_pool_fee_bp: 400,
         }
     }
 
-    pub fn assert_not_busy(&self) {
-        assert!(!self.contract_busy, "Contract is busy. Try again later");
-    }
-
-    pub fn set_not_busy(&mut self) {
+    pub fn set_not_busy(&mut self, account_id:AccountId) {
         self.assert_owner();
-        self.contract_busy=false;
+        let mut acc = self.accounts.get(&account_id).unwrap();
+        acc.busy=false;
+        self.internal_save_account(&account_id, &acc);
+
     }
 
 }

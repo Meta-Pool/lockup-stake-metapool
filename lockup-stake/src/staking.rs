@@ -17,7 +17,7 @@ use crate::*;
 pub const META_POOL_DEPOSIT_AND_STAKE_GAS: u64 = 30 * TGAS;
 pub const AFTER_STAKE_FOR_LOCKUP_GAS: u64 = 5 * TGAS;
 
-pub const META_POOL_WITHDRAW_GAS: u64 = 20 * TGAS;
+pub const META_POOL_WITHDRAW_GAS: u64 = 10 * TGAS;
 pub const AFTER_WITHDRAW_GAS: u64 = 5 * TGAS;
 
 pub const META_POOL_UNSTAKE_SHARES_GAS: u64 = 20 * TGAS;
@@ -38,142 +38,50 @@ pub trait SelfContract {
     fn after_stake_for_lockup(
         &mut self,
         account_id: AccountId,
-        amount: U128,
-        included_a_deposit: bool,
+        deposited_amount: U128,
     );
-    fn after_withdraw(&mut self, account_id: AccountId, total_requested: U128);
+    fn after_metapool_withdraw_to_lockup(
+        &mut self,
+        account_id: AccountId,
+        amount: U128,
+    );
     fn after_unstake_shares(&mut self, account_id: AccountId, num_shares: U128);
 }
 
 #[near_bindgen]
 impl StakingContract {
-    /// Just deposits the attached amount into account.unstaked - does not stake
+    // =====================
+    // == DEPOSIT & STAKE ==
+    // =====================
+
+    // Note: there are two deposit functions in the reference contract near-core/staking-pool:
+    // `deposit` and `deposit_and_stake`. To increase safety and simplicity, we only support here `deposit_and_stake` method.
+    // This is the same decision made in the meta-pool contract. This simplification also implies removing `fn stake` and `fn stake_all`.
+    // All actions can be replaced by calls to `deposit_and_stake`
     #[payable]
     pub fn deposit(&mut self) {
-        self.internal_deposit();
+        panic!("not supported, please use deposit_and_stake");
     }
 
-    /// Withdraws the entire unstaked balance from the predecessor account.
-    /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
-    pub fn withdraw_all(&mut self) -> Promise {
-        let account_id = env::predecessor_account_id();
-        let account = self.internal_get_account(&account_id);
-        self.perform_withdraw(&account_id, account.unstaked)
+    /// Stakes all available unstaked balance from the inner account of the predecessor.
+    pub fn stake_all(&mut self) -> Promise {
+        panic!("not supported, please use deposit_and_stake");
     }
 
-    /// Withdraws the non staked balance for given account.
-    /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
-    pub fn withdraw(&mut self, amount: U128) -> Promise {
-        self.perform_withdraw(&env::predecessor_account_id(), amount.into())
-    }
-
-    fn perform_withdraw(&mut self, account_id: &AccountId, amount: Balance) -> Promise {
-        assert!(amount > 0, "Withdrawal amount should be positive");
-
-        let mut account = self.internal_get_account(&account_id);
-
-        if account.unstaked >= amount {
-            // local balance is enough
-            account.unstaked -= amount;
-            self.internal_save_account(&account_id, &account);
-
-            log!(
-                "@{} LOCAL withdrawing {}. New unstaked balance is {}",
-                account_id,
-                amount,
-                account.unstaked
-            );
-
-            Promise::new(account_id.clone()).transfer(amount)
-
-        } else if account.unstaked + account.unstaked_in_metapool >= amount {
-
-            // we have to ask first Meta Pool for the withdraw
-            // make sure the wait period is over
-            assert!(
-                account.unstaked_available_epoch_height <= env::epoch_height(),
-                "The unstaked balance is not yet available due to unstaking delay"
-            );
-            self.assert_not_busy();
-            // flag busy to avoid reentry
-            self.contract_busy = true;
-            // call metapool
-            ext_metapool::withdraw_to_lockup(
-                account_id.to_string(),
-                account.unstaked_in_metapool.into(),
-                self.meta_pool_contract_id.clone(),
-                0,
-                Gas(META_POOL_WITHDRAW_GAS),
-            )
-            .then(ext_self::after_withdraw(
-                account_id.clone(),
-                amount.into(),
-                env::current_account_id(),
-                0,
-                Gas(AFTER_WITHDRAW_GAS),
-            ))
-        } else {
-            panic!("Not enough unstaked balance to withdraw");
-        }
-    }
-    #[private]
-    // continues after previous fn
-    pub fn after_withdraw(&mut self, account_id: AccountId, total_requested: U128) {
-        // WARN: This is a callback after-cross-contract-call method
-        // busy locks must be saved false in the state, this method SHOULD NOT PANIC
-        self.contract_busy = false;
-        let mut account = self.internal_get_account(&account_id);
-        if !is_promise_success() {
-            // withdraw at meta pool failed, but can not panic
-            log!(
-                "ERROR! @{} asking for METAPOOL withdraw {} FAILED",
-                account_id,
-                account.unstaked_in_metapool,
-            );
-        } else {
-            let total_requested = total_requested.0;
-            log!(
-                "@{} asking for METAPOOL withdraw {} OK!, original user request {}",
-                account_id,
-                account.unstaked_in_metapool,
-                total_requested
-            );
-            // retrieved from metapool is: account.unstaked_in_metapool
-            // now the amount is in this contract
-            account.unstaked += account.unstaked_in_metapool;
-            // no more unstaked in metapool for this user
-            account.unstaked_in_metapool = 0;
-            // compute amount to send
-            let to_send = std::cmp::min(total_requested, account.unstaked);
-            // remove from user balance
-            account.unstaked -= to_send;
-            // save account
-            self.internal_save_account(&account_id, &account);
-            // send the NEAR from account.unstaked to the user
-            Promise::new(account_id.clone()).transfer(to_send);
-        }
+    /// Stakes the given amount from the inner account of the predecessor.
+    /// The inner account should have enough unstaked balance.
+    #[allow(unused_variables)]
+    pub fn stake(&mut self, amount: U128) -> Promise {
+        panic!("not supported, please use deposit_and_stake");
     }
 
     /// Deposits the attached amount into the inner account of the predecessor and stakes it.
     /// Note: The foundation-s near-core/lockup-contract USES 50GAS for this call
     #[payable]
     pub fn deposit_and_stake(&mut self) -> Promise {
-        self.internal_deposit();
-        self.perform_stake(env::predecessor_account_id(), env::attached_deposit(), true)
+        self.perform_stake(env::predecessor_account_id(), env::attached_deposit())
     }
 
-    /// Stakes all available unstaked balance from the inner account of the predecessor.
-    pub fn stake_all(&mut self) -> Promise {
-        let account_id = env::predecessor_account_id();
-        let account = self.internal_get_account(&account_id);
-        self.perform_stake(account_id, account.unstaked, false)
-    }
-
-    /// Stakes the given amount from the inner account of the predecessor.
-    /// The inner account should have enough unstaked balance.
-    pub fn stake(&mut self, amount: U128) -> Promise {
-        self.perform_stake(env::predecessor_account_id(), amount.into(), false)
-    }
     /// Stakes the given amount from the balance at account.unstaked
     /// The account should have enough unstaked balance.
     /// calls Meta Pool to stake
@@ -181,28 +89,23 @@ impl StakingContract {
         &mut self,
         account_id: AccountId,
         amount: u128,
-        included_a_deposit: bool,
     ) -> Promise {
-        let amount: Balance = amount.into();
         // we're managing lockup.accounts, keep a sane minimum
         assert!(amount >= 10 * ONE_NEAR, "minimum deposit amount is 10 NEAR");
 
-        self.internal_register_staking(amount);
-        // call meta pool
         // avoiding re-entry
-        self.assert_not_busy();
-        self.contract_busy = true;
+        self.set_account_busy_flag_or_panic(&account_id);
+        // call meta pool
         ext_metapool::stake_for_lockup(
             account_id.to_string(),
             //---
             self.meta_pool_contract_id.clone(),
-            amount,
+            amount, // send the NEAR
             Gas(META_POOL_DEPOSIT_AND_STAKE_GAS),
         )
         .then(ext_self::after_stake_for_lockup(
             account_id,
             amount.into(),
-            included_a_deposit,
             //---
             env::current_account_id(),
             0,
@@ -214,25 +117,32 @@ impl StakingContract {
     pub fn after_stake_for_lockup(
         &mut self,
         account_id: AccountId,
-        amount: U128,
-        included_a_deposit: bool,
+        deposited_amount: U128,
     ) {
         // WARN: This is a callback after-cross-contract-call method
         // busy locks must be saved false in the state, this method SHOULD NOT PANIC
         // SO DO NOT USE `#[callback]num_shares:U128` arguments, decode the return value manually
 
-        self.contract_busy = false;
         // Check promise result and det the received_nears from the promise result.
         match env::promise_result(0) {
             PromiseResult::NotReady => unreachable!(),
 
             PromiseResult::Successful(value) => {
                 if let Ok(num_shares) = near_sdk::serde_json::from_slice::<U128>(&value) {
+                    let num_shares = num_shares.0;
+                    log!(
+                        "@{} deposit_and_stake {} received {} shares",
+                        account_id,
+                        deposited_amount.0,
+                        num_shares
+                    );
                     // register shares received
                     let mut account = self.internal_get_account(&account_id);
-                    account.stake_shares += num_shares.0;
+                    account.busy = false;
+                    account.stake_shares += num_shares;
                     self.internal_save_account(&account_id, &account);
-                    self.total_stake_shares += num_shares.0;
+                    // update also contract total
+                    self.total_stake_shares += num_shares;
                 } else {
                     // promise ok but no result? -- should not happen
                     log!("UNEXPECTED ERROR: promise ok but no result!",);
@@ -240,21 +150,20 @@ impl StakingContract {
             }
 
             PromiseResult::Failed => {
-                let amount = amount.0;
                 // stake at meta pool failed, ROLLBACK
-                self.rollback_internal_stake(account_id.clone(), amount);
-                if included_a_deposit {
-                    // roll back deposit registration
-                    self.rollback_internal_deposit(&account_id, amount);
-                    // return NEARs to user
-                    Promise::new(account_id).transfer(amount);
-                }
+                self.clear_busy_flag(&account_id);
+                // return NEARs to the lockup-account
+                Promise::new(account_id).transfer(deposited_amount.0);
             }
         };
     }
 
+    // =============
+    // == UNSTAKE ==
+    // =============
+
     /// Unstakes all staked balance from the inner account of the predecessor.
-    /// The new total unstaked balance will be available for withdrawal in four epochs.
+    /// The new total unstaked balance will be available for withdrawal in x epochs.
     pub fn unstake_all(&mut self) -> Promise {
         let account_id = env::predecessor_account_id();
         let account = self.internal_get_account(&account_id);
@@ -264,6 +173,9 @@ impl StakingContract {
     /// Unstakes the given amount (in NEARs) from the inner account of the predecessor.
     /// The inner account should have enough staked balance.
     /// The new total unstaked balance will be available for withdrawal in four epochs.
+    /// given that the share price increases with staking rewards, it is possible that final amount
+    /// withdrawn could be higher because of the inclusion of new staking rewards
+    /// (the amount could only be higher, not lower)
     pub fn unstake(&mut self, amount: U128) -> Promise {
         let amount: Balance = amount.into();
         let shares = mul_div(amount, ONE_NEAR, self.share_near_price);
@@ -286,9 +198,9 @@ impl StakingContract {
             account.stake_shares
         );
 
+        // avoid re-entry
+        self.set_account_busy_flag_or_panic(&account_id);
         // call meta pool
-        self.assert_not_busy();
-        self.contract_busy = true;
         ext_metapool::unstake_from_lockup_shares(
             account_id.to_string(),
             num_shares.into(),
@@ -312,34 +224,33 @@ impl StakingContract {
         // WARN: This is a callback after-cross-contract-call method
         // busy locks must be saved false in the state, this method SHOULD NOT PANIC
         // SO DO NOT USE `#[callback]received_nears:U128` arguments, decode the return value manually
-        self.contract_busy = false;
 
         // convert to u128
         let num_shares = num_shares.0;
 
-        // Check promise result and det the received_nears from the promise result.
+        // Check promise result and subtract the received_nears from the promise result.
         match env::promise_result(0) {
             PromiseResult::NotReady => unreachable!(),
 
             PromiseResult::Successful(value) => {
-                if let Ok((unstaked_nears, unstaked_available_epoch_height)) = near_sdk::serde_json::from_slice::<(U128,U64)>(&value) {
+                if let Ok((unstaked_nears, unstaked_available_epoch_height)) =
+                    near_sdk::serde_json::from_slice::<(U128, U64)>(&value)
+                {
+                    let unstaked_nears = unstaked_nears.0;
                     // register the successful unstake share
                     let mut account = self.internal_get_account(&account_id);
+                    account.busy = false;
                     account.stake_shares -= num_shares;
-                    account.unstaked_in_metapool += unstaked_nears.0;
+                    account.unstaked_in_metapool += unstaked_nears;
                     account.unstaked_available_epoch_height = unstaked_available_epoch_height.0;
                     self.internal_save_account(&account_id, &account);
+                    // update contract totals
+                    self.total_stake_shares -= num_shares;
                     log!(
-                        "unstake shares at meta pool OK! account {}, shares {}, unstaked_nears {}",
+                        "unstake shares at meta pool OK! account:{}, shares:{}, unstaked_nears:{}. Contract shares:{} ",
                         account_id,
                         num_shares,
-                        unstaked_nears.0
-                    );
-
-                    self.total_stake_shares -= num_shares;
-
-                    log!(
-                        "Contract total number of shares {}",
+                        unstaked_nears,
                         self.total_stake_shares
                     );
                 } else {
@@ -350,6 +261,7 @@ impl StakingContract {
 
             PromiseResult::Failed => {
                 // unstake shares at meta pool failed!
+                self.clear_busy_flag(&account_id);
                 log!(
                     "ERR: unstake shares at meta pool failed! account {}, shares {}",
                     account_id,
@@ -357,5 +269,99 @@ impl StakingContract {
                 );
             }
         };
+    }
+
+    // ==============
+    // == WITHDRAW ==
+    // ==============
+
+    /// Withdraws the entire unstaked balance from the predecessor account.
+    /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
+    pub fn withdraw_all(&mut self) -> Promise {
+        let account_id = env::predecessor_account_id();
+        let account = self.internal_get_account(&account_id);
+        self.perform_withdraw(&account_id, account.unstaked_in_metapool)
+    }
+
+    /// Withdraws the non staked balance for given account.
+    /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
+    pub fn withdraw(&mut self, amount: U128) -> Promise {
+        self.perform_withdraw(&env::predecessor_account_id(), amount.into())
+    }
+
+    fn perform_withdraw(&mut self, account_id: &AccountId, amount: Balance) -> Promise {
+        assert!(amount > 0, "Withdrawal amount should be positive");
+        let account = self.internal_get_account(&account_id);
+        // the user has enough balance?
+        assert!(
+            account.unstaked_in_metapool >= amount,
+            "Not enough unstaked balance to withdraw"
+        );
+
+        // Note: the reference contract is near-core/staking-contract from the NEAR foundation.
+        // In that contract, asking for unstake locks all funds, including any funds deposited but not staked yet.
+        // https://github.com/near/core-contracts/blob/3f3170fce91ff4d8c6ee9d15683f2d4dfe1275cf/staking-pool/src/internal.rs#L42
+        // Here we need to replicate the same mechanics: reject withdrawals if env::epoch_height() < unstaked_available_epoch_height
+        // even if there are funds in account.unstaked, in order to emulated the expected behavior set by near-core/staking-contract
+
+        // make sure the wait period is over
+        assert!(
+            account.unstaked_available_epoch_height <= env::epoch_height(),
+            "The unstaked balance is not yet available due to unstaking delay"
+        );
+
+        // avoiding re-entry
+        self.set_account_busy_flag_or_panic(&account_id);
+        // call metapool. The NEAR will be sent directly to the lockup account
+        ext_metapool::withdraw_to_lockup(
+            account_id.to_string(),
+            amount.into(),
+            //--
+            self.meta_pool_contract_id.clone(),
+            0,
+            Gas(META_POOL_WITHDRAW_GAS),
+        )
+        .then(ext_self::after_metapool_withdraw_to_lockup(
+            account_id.clone(),
+            amount.into(),
+            //--
+            env::current_account_id(),
+            0,
+            Gas(AFTER_WITHDRAW_GAS),
+        ))
+    }
+    #[private]
+    // continues after previous fn
+    pub fn after_metapool_withdraw_to_lockup(
+        &mut self,
+        account_id: AccountId,
+        amount: U128,
+    ) {
+        // WARN: This is a callback after-cross-contract-call method
+        // busy locks must be saved false in the state, this method SHOULD NOT PANIC
+        let amount = amount.0;
+        if is_promise_success() {
+            // withdraw success
+            log!(
+                "withdraw from meta pool to {} for {} yNEAR succeeded",
+                account_id,
+                amount,
+            );
+            // the amount was sent by meta-pool to the lockup account
+            let mut account = self.internal_get_account(&account_id);
+            account.busy = false;
+            account.unstaked_in_metapool = account.unstaked_in_metapool.saturating_sub(amount);
+            // save account
+            self.internal_save_account(&account_id, &account);
+        } else {
+            // failed!
+            self.clear_busy_flag(&account_id);
+            // withdraw at meta pool failed, but we can not panic here, just log
+            log!(
+                "ERROR! @{} asking for METAPOOL withdraw {} FAILED",
+                account_id,
+                amount,
+            );
+        }
     }
 }
