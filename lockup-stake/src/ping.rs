@@ -1,22 +1,22 @@
 use near_sdk::env;
 
-use crate::ext_contract;
+use near_sdk::ext_contract;
 use crate::*;
 use crate::utils::TGAS;
 
 // Note: looks like that on promises, near core adds 5 extra TGAS on each call
-pub const GET_FUNCTION_GAS: u64 = 1*TGAS;
-pub const AFTER_GET_FUNCTION_GAS: u64 = 1*TGAS;
+pub const GET_FUNCTION_GAS: u64 = 1 * TGAS;
+pub const AFTER_GET_FUNCTION_GAS: u64 = 1 * TGAS;
 
 /// Interface for Meta Pool
 #[ext_contract(ext_metapool)]
-trait mp {
+trait MetaPool {
     fn get_st_near_price(&self) -> U128;
     fn get_reward_fee_bp(&self) -> u16;
 }
 /// Interface for the contract itself.
 #[ext_contract(ext_self)]
-pub trait SelfContract {
+pub trait ThisContract {
     // callbacks to receive the result of view function
     fn after_get_st_near_price(&self, #[callback] st_near_price: U128);
     fn after_get_reward_fee_bp(&self, #[callback] bp: u16);

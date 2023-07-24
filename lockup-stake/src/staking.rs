@@ -35,20 +35,13 @@ trait mp {
 pub trait SelfContract {
     /// A callback to check the result of the staking action.
     /// In case the stake failed, this callback rollbacks changes
-    fn after_stake_for_lockup(
-        &mut self,
-        account_id: AccountId,
-        deposited_amount: U128,
-    );
-    fn after_metapool_withdraw_to_lockup(
-        &mut self,
-        account_id: AccountId,
-        amount: U128,
-    );
+    fn after_stake_for_lockup(&mut self, account_id: AccountId, deposited_amount: U128);
+    fn after_metapool_withdraw_to_lockup(&mut self, account_id: AccountId, amount: U128);
     fn after_unstake_shares(&mut self, account_id: AccountId, num_shares: U128);
 }
 
-const NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE: &str = "not supported, please use deposit_and_stake";
+const NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE: &str =
+    "not supported, please use deposit_and_stake";
 
 #[near_bindgen]
 impl StakingContract {
@@ -56,35 +49,34 @@ impl StakingContract {
     // == DEPOSIT & STAKE ==
     // =====================
 
-    // Note: In the reference contract near-core/staking-pool, depositing and staking 
+    // Note: In the reference contract near-core/staking-pool, depositing and staking
     // can be performed separately or in a single call:
     // There are functions called: `deposit` then `stake` and `stake_all`, and the composed `deposit_and_stake`.
     // To increase safety and simplicity, we only support the simpler `deposit_and_stake` method.
-    // By removing the concept of "locally deposited balance" the contract becomes simpler and thus more secure. 
+    // By removing the concept of "locally deposited balance" the contract becomes simpler and thus more secure.
     // Note 1: All unstake and withdraw functions are supported.
     // Note 2: The standard wallet uses deposit_and_stake when dealing with lockup accounts
     #[payable]
     pub fn deposit(&mut self) {
-        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
+        panic!("{}", NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Stakes all available unstaked balance from the inner account of the predecessor.
     pub fn stake_all(&mut self) -> Promise {
-        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
+        panic!("{}", NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Stakes the given amount from the inner account of the predecessor.
     /// The inner account should have enough unstaked balance.
     #[allow(unused_variables)]
     pub fn stake(&mut self, amount: U128) -> Promise {
-        panic!("{}",NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
+        panic!("{}", NOT_SUPPORTED_PLEASE_USE_DEPOSIT_AND_STAKE);
     }
 
     /// Deposits the attached amount into the inner account of the predecessor and stakes it.
     /// Note: The foundation-s near-core/lockup-contract USES 50GAS for this call
     #[payable]
     pub fn deposit_and_stake(&mut self) -> Promise {
-     
         let account_id = env::predecessor_account_id();
         let amount = env::attached_deposit();
 
@@ -100,7 +92,7 @@ impl StakingContract {
             self.meta_pool_contract_id.clone(),
             amount, // send the NEAR
             Gas(META_POOL_DEPOSIT_AND_STAKE_GAS),
-        )
+            )
         .then(ext_self::after_stake_for_lockup(
             account_id,
             amount.into(),
@@ -112,11 +104,7 @@ impl StakingContract {
     }
     #[private]
     // continues after previous fn
-    pub fn after_stake_for_lockup(
-        &mut self,
-        account_id: AccountId,
-        deposited_amount: U128,
-    ) {
+    pub fn after_stake_for_lockup(&mut self, account_id: AccountId, deposited_amount: U128) {
         // WARN: This is a callback after-cross-contract-call method
         // busy locks must be saved false in the state, this method SHOULD NOT PANIC
         // SO DO NOT USE `#[callback]num_shares:U128` arguments, decode the return value manually
@@ -206,7 +194,7 @@ impl StakingContract {
             self.meta_pool_contract_id.clone(),
             0,
             Gas(META_POOL_UNSTAKE_SHARES_GAS),
-        )
+            )
         .then(ext_self::after_unstake_shares(
             account_id.clone(),
             num_shares.into(),
@@ -318,7 +306,7 @@ impl StakingContract {
             self.meta_pool_contract_id.clone(),
             0,
             Gas(META_POOL_WITHDRAW_GAS),
-        )
+            )
         .then(ext_self::after_metapool_withdraw_to_lockup(
             account_id.clone(),
             amount.into(),
@@ -330,11 +318,7 @@ impl StakingContract {
     }
     #[private]
     // continues after previous fn
-    pub fn after_metapool_withdraw_to_lockup(
-        &mut self,
-        account_id: AccountId,
-        amount: U128,
-    ) {
+    pub fn after_metapool_withdraw_to_lockup(&mut self, account_id: AccountId, amount: U128) {
         // WARN: This is a callback after-cross-contract-call method
         // busy locks must be saved false in the state, this method SHOULD NOT PANIC
         let amount = amount.0;

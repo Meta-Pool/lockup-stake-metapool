@@ -1,6 +1,7 @@
 [workspace]
+
 members = [
-    "./lockup-stake"
+    "lockup-stake"
 ]
 
 [profile.release]

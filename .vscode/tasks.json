@@ -3,13 +3,21 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"command": ".",
-			"args": ["build.sh"],
+			"command": ". build.sh",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "build",
 			"label": "build.sh"
+		},
+		{
+			"type": "cargo",
+			"command": "test",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "test",
+			"label": "test"
 		}
 	]
 }
