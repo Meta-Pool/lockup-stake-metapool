@@ -83,9 +83,9 @@ impl StakingContract {
         };
     }
 
-    /// Returns true if the staking is paused
+    /// kept for compatibility with core-contracts/staking-pool
     pub fn is_staking_paused(&self) -> bool {
-        self.paused
+        false
     }
 
     /// Returns human readable representation of the account for the given account ID.

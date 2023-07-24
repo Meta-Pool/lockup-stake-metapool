@@ -1,4 +1,4 @@
-use near_sdk::env::is_valid_account_id;
+use near_sdk::{env::is_valid_account_id, assert_one_yocto};
 
 use crate::*;
 
@@ -9,7 +9,9 @@ use crate::*;
 impl StakingContract {
 
     /// Changes contract owner. Must be called by current owner.
+    #[payable]
     pub fn set_owner_id(&mut self, new_owner_id: &AccountId) {
+        assert_one_yocto();
         assert!(is_valid_account_id(&new_owner_id.as_bytes()));
         assert_eq!(
             self.owner_id,
@@ -17,22 +19,6 @@ impl StakingContract {
             "MUST BE OWNER TO SET OWNER"
         );
         self.owner_id = new_owner_id.clone();
-    }
-
-    /// Owner's method.
-    /// Pauses pool staking.
-    pub fn pause_staking(&mut self) {
-        self.assert_owner();
-        assert!(!self.paused, "The staking is already paused");
-        self.paused = true;
-    }
-
-    /// Owner's method.
-    /// Resumes pool staking.
-    pub fn resume_staking(&mut self) {
-        self.assert_owner();
-        assert!(self.paused, "The staking is not paused");
-        self.paused = false;
     }
 
     /// Asserts that the method was called by the owner.
