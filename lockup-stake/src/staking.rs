@@ -4,6 +4,7 @@ use near_sdk::log;
 use near_sdk::PromiseResult;
 
 use crate::ext_contract;
+use crate::utils::assert_is_lockup_account;
 use crate::utils::mul_div;
 use crate::utils::TGAS;
 use crate::*;
@@ -78,6 +79,7 @@ impl StakingContract {
     #[payable]
     pub fn deposit_and_stake(&mut self) -> Promise {
         let account_id = env::predecessor_account_id();
+        assert_is_lockup_account(&account_id);
         let amount = env::attached_deposit();
 
         // we're managing lockup.accounts, keep a sane minimum
@@ -152,6 +154,7 @@ impl StakingContract {
     /// The new total unstaked balance will be available for withdrawal in x epochs.
     pub fn unstake_all(&mut self) -> Promise {
         let account_id = env::predecessor_account_id();
+        assert_is_lockup_account(&account_id);
         let account = self.internal_get_account(&account_id);
         self.inner_unstake_shares(&account_id, account.stake_shares)
     }
@@ -163,9 +166,11 @@ impl StakingContract {
     /// withdrawn could be higher because of the inclusion of new staking rewards
     /// (the amount could only be higher, not lower)
     pub fn unstake(&mut self, amount: U128) -> Promise {
+        let account_id = env::predecessor_account_id();
+        assert_is_lockup_account(&account_id);
         let amount: Balance = amount.into();
         let shares = mul_div(amount, ONE_NEAR, self.share_near_price);
-        self.inner_unstake_shares(&env::predecessor_account_id(), shares)
+        self.inner_unstake_shares(&account_id, shares)
     }
 
     fn inner_unstake_shares(&mut self, account_id: &AccountId, num_shares: u128) -> Promise {
@@ -265,6 +270,7 @@ impl StakingContract {
     /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
     pub fn withdraw_all(&mut self) -> Promise {
         let account_id = env::predecessor_account_id();
+        assert_is_lockup_account(&account_id);
         let account = self.internal_get_account(&account_id);
         self.perform_withdraw(&account_id, account.unstaked_in_metapool)
     }
@@ -272,7 +278,9 @@ impl StakingContract {
     /// Withdraws the non staked balance for given account.
     /// It's only allowed if the `unstake` action was not performed in the four most recent epochs.
     pub fn withdraw(&mut self, amount: U128) -> Promise {
-        self.perform_withdraw(&env::predecessor_account_id(), amount.into())
+        let account_id = env::predecessor_account_id();
+        assert_is_lockup_account(&account_id);
+        self.perform_withdraw(&account_id, amount.into())
     }
 
     fn perform_withdraw(&mut self, account_id: &AccountId, amount: Balance) -> Promise {
