@@ -16,7 +16,9 @@ type LockupStakeContract = ContractAccount<StakingContractContract>;
 
 pub const LOCKUP_STAKE_CONTRACT_ID: &str = "lockup.meta-pool.near";
 pub const WHITELIST_ACCOUNT_ID: &str = "whitelist";
-pub const LOCKUP_ACCOUNT_ID: &str = "ab12345def-lockup-near";
+pub const TESTNET_ACCOUNT_ID: &str = "testnet";
+pub const LOCKUPY_TESTNET_ACCOUNT_ID: &str = "lockupy.testnet";
+pub const LOCKUP_ACCOUNT_ID: &str = "ab12345def.lockupy.testnet";
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     LOCKUP_STAKE_METAPOOL_BYTES => "../res/lockup_stake_metapool.wasm",
@@ -142,8 +144,8 @@ pub fn storage_register(user: &UserAccount, account_id: AccountId) {
     );
 }
 
-pub fn setup() -> (UserAccount, LockupStakeContract, UserAccount) {
-/*  */    let lockup_stake_initial_balance: Balance = 10 * NEAR;
+pub fn setup() -> (UserAccount,UserAccount, LockupStakeContract, UserAccount) {
+    let lockup_stake_initial_balance: Balance = 10 * NEAR;
     println!("start setup");
     let root = init_simulator(None);
     // Disable contract rewards.
@@ -178,8 +180,11 @@ pub fn setup() -> (UserAccount, LockupStakeContract, UserAccount) {
         to_yocto("100"),
         near_sdk_sim::DEFAULT_GAS,
     );
+    println!("create near account");
+    let testnet_account = root.create_user(AccountId::new_unchecked(TESTNET_ACCOUNT_ID.to_string()), to_yocto("100000000"));
+    let lockupy_testnet_account = testnet_account.create_user(AccountId::new_unchecked(LOCKUPY_TESTNET_ACCOUNT_ID.to_string()), to_yocto("1000000"));
     println!("deploy lockup accounts");
-    let lockup = root.deploy_and_init(
+    let lockup = lockupy_testnet_account.deploy_and_init(
         &LOCKUP_BYTES,
         lockup_account_id(),
         "new",
@@ -213,7 +218,7 @@ pub fn setup() -> (UserAccount, LockupStakeContract, UserAccount) {
         0,
     );
     println!("end setup");
-    (root, lockup_stake, lockup)
+    (root, lockupy_testnet_account, lockup_stake, lockup)
 }
 
 pub fn assert_between(value: Balance, from: &str, to: &str) {
@@ -265,11 +270,11 @@ pub fn balance_shares_metapool(user2: &UserAccount) -> Balance {
 
 pub fn create_user_and_stake(
     account_id: String,
-    root: &UserAccount,
+    creator_account: &UserAccount,
     lockup_stake: &LockupStakeContract,
 ) -> UserAccount {
-    let user1 = root.create_user(AccountId::new_unchecked(account_id), to_yocto("100000"));
-    storage_register(&root, user1.account_id());
+    let user1 = creator_account.create_user(AccountId::new_unchecked(account_id), to_yocto("100000"));
+    storage_register(&creator_account, user1.account_id());
     println!("calling deposit_and_stake");
     assert_all_success(call!(
         user1,

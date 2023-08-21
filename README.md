@@ -15,10 +15,11 @@ The contract is non-custodial, and the owner can unstake the funds with the stan
 
 1. run `bash build.sh`
 
-### To Test
+### Local Integration Test
 
-1. Compile Meta Pool liquid staking contract, using the branch named: `with-test-functions` 
+1. Compile Meta Pool [liquid staking contract](https://github.com/Meta-Pool/liquid-staking-contract), using the branch named: `with-test-functions` 
 2. copy the generated `metapool.wasm` into the `/res` folder
+`cp target/wasm32-unknown-unknown/release/metapool.wasm ../lockup-stake-metapool/res/`
 3. run `cargo test`
 
 ### Testnet contract address

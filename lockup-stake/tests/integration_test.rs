@@ -11,15 +11,15 @@ use lockup_stake_metapool::NEAR;
 
 #[test]
 fn test_deposit_and_stake() {
-    let (root, lockup_stake, _lockup) = setup();
+    let (root, lockupy_testnet, lockup_stake, _lockup) = setup();
     assert_eq!(
         to_int(view!(
             lockup_stake.get_account_total_balance(root.account_id())
         )),
         to_yocto("0")
     );
-    let user1 = create_user_and_stake("user1".into(), &root, &lockup_stake);
-    let _user2 = create_user_and_stake("user2".into(), &root, &lockup_stake);
+    let user1 = create_user_and_stake("user1.lockupy.testnet".into(), &lockupy_testnet, &lockup_stake);
+    let _user2 = create_user_and_stake("user2.lockupy.testnet".into(), &lockupy_testnet, &lockup_stake);
 
     assert_eq!(
         to_int(view!(
@@ -46,9 +46,9 @@ fn test_deposit_and_stake() {
 /// Tests lockup_stake, depositing from regular account and from lockup-account.
 #[test]
 fn test_stake_with_lockup() {
-    let (root, lockup_stake, lockup) = setup();
+    let (root, lockupy_testnet, lockup_stake, lockup) = setup();
 
-    let user1 = create_user_and_stake("user1".into(), &root, &lockup_stake);
+    let user1 = create_user_and_stake("user1.lockupy.testnet".into(), &lockupy_testnet, &lockup_stake);
     let user1_stake = 10000 * NEAR;
 
     assert_between(
@@ -212,9 +212,9 @@ fn test_stake_with_lockup() {
 
 #[test]
 fn test_stake_with_lockup_fail_paths() {
-    let (root, lockup_stake, lockup) = setup();
+    let (root, lockupy_testnet, lockup_stake, lockup) = setup();
 
-    let user1 = create_user_and_stake("user1".into(), &root, &lockup_stake);
+    let user1 = create_user_and_stake("user1.lockupy.testnet".into(), &lockupy_testnet, &lockup_stake);
     let user1_stake = 10000 * NEAR;
 
     assert_between(
@@ -385,9 +385,9 @@ fn test_stake_with_lockup_fail_paths() {
 
 #[test]
 fn test_stake_with_nslp_clearing() {
-    let (root, lockup_stake, lockup) = setup();
+    let (root, lockupy_testnet, lockup_stake, lockup) = setup();
 
-    let user1 = create_user_and_stake("user1".into(), &root, &lockup_stake);
+    let user1 = create_user_and_stake("user1.lockupy.testnet".into(), &lockupy_testnet, &lockup_stake);
     let user1_stake = 10000 * NEAR;
 
     let initial_user2_deposit = 10100 * NEAR;
