@@ -15,14 +15,14 @@ OWNER=test-narwallets.$NETWORK
 
 # FIRST DEPLOY
 # # delete acc
-# echo "Delete $CONTRACT_ACC? are you sure? Ctrl-C to cancel"
-# read input
-# near delete $CONTRACT_ACC $MASTER_ACC --beneficiaryId $MASTER_ACC
-# near create-account $CONTRACT_ACC --masterAccount $MASTER_ACC --initialBalance 10
-# near deploy $CONTRACT_ACC $WASM \
-#      new "{\"owner_id\":\"$OWNER\", \"meta_pool_contract_id\":\"$META_POOL_CONTRACT\"}" \
-#      --accountId $MASTER_ACC
-#exit    
+#  echo "Delete $CONTRACT_ACC? are you sure? Ctrl-C to cancel"
+#  read input
+#  near delete $CONTRACT_ACC $MASTER_ACC --beneficiaryId $MASTER_ACC
+#  near create-account $CONTRACT_ACC --masterAccount $MASTER_ACC --initialBalance 10
+#  near deploy $CONTRACT_ACC $WASM \
+#       new "{\"owner_id\":\"$OWNER\", \"meta_pool_contract_id\":\"$META_POOL_CONTRACT\"}" \
+#       --accountId $MASTER_ACC
+# exit    
 
 
 # RE-DEPLOY, code only

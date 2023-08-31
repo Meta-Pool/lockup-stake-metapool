@@ -5,8 +5,8 @@ use crate::*;
 use crate::utils::TGAS;
 
 // Note: looks like that on promises, near core adds 5 extra TGAS on each call
-pub const GET_FUNCTION_GAS: u64 = 1 * TGAS;
-pub const AFTER_GET_FUNCTION_GAS: u64 = 1 * TGAS;
+pub const GET_FUNCTION_GAS: u64 = 8 * TGAS;
+pub const AFTER_GET_FUNCTION_GAS: u64 = 4 * TGAS;
 
 /// Interface for Meta Pool
 #[ext_contract(ext_metapool)]
